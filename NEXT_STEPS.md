@@ -15,6 +15,7 @@ python convert_to_onnx.py
 ```
 
 Expected output:
+
 ```
 ✅ SUCCESS! Model converted to ONNX format!
    Output file: best_cnn_lstm_model.onnx
@@ -24,6 +25,7 @@ Expected output:
 ## Step 2: Verify Files Exist
 
 After conversion, verify these files exist in your project:
+
 - ✅ `best_cnn_lstm_model.onnx` (NEW - ~50MB)
 - ✅ `best_cnn_lstm_model.h5` (KEEP for reference)
 - ✅ `data_scaler.joblib`
@@ -60,17 +62,18 @@ Then re-deploy to Streamlit Cloud or your cloud platform!
 
 ## 🔑 Why This Works
 
-| Component | Solution | Benefit |
-|-----------|----------|---------|
-| Model | ONNX Runtime | Python 3.14 compatible, 10x faster |
-| Data | Yahoo Finance (yfinance) | No geo-blocking, worldwide, reliable |
-| Deployment | Streamlit Cloud | Free, easy, supports Python 3.11 |
+| Component  | Solution                 | Benefit                              |
+| ---------- | ------------------------ | ------------------------------------ |
+| Model      | ONNX Runtime             | Python 3.14 compatible, 10x faster   |
+| Data       | Yahoo Finance (yfinance) | No geo-blocking, worldwide, reliable |
+| Deployment | Streamlit Cloud          | Free, easy, supports Python 3.11     |
 
 ---
 
 ## ⚡ Key Changes Made (Final Version)
 
 **Files Updated:**
+
 1. ✅ `requirements.txt` - Replaced python-binance with yfinance
 2. ✅ `utils.py` - Simple yfinance data fetching
 3. ✅ `app.py` - Updated to use yfinance
@@ -90,6 +93,7 @@ Then re-deploy to Streamlit Cloud or your cloud platform!
 ---
 
 **Key Benefits of yfinance:**
+
 - ✅ No API keys needed
 - ✅ No geo-restrictions (works worldwide)
 - ✅ Reliable data source

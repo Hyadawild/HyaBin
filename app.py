@@ -97,21 +97,21 @@ def main():
         return
     
     # ==================== Header ====================
-    st.title("📈 BNB Price Prediction")
+    st.title("BNB Price Prediction")
     st.markdown("""
     Real-time BNB/USDT price prediction using CNN-LSTM Neural Network with Genetic Algorithm optimization.
     Predicts next day's closing price based on 30 days of historical data.
     
     **Model**: ONNX format (converted from TensorFlow Keras)
-    **Data Source**: Yahoo Finance (yfinance) - No geo-blocking, worldwide access
+    **Data Source**: Yahoo Finance (yfinance)
     """)
     
     # ==================== Sidebar ====================
     with st.sidebar:
-        st.header("⚙️ Controls")
+        st.header(" Controls")
         
         # Refresh button
-        if st.button("🔄 Refresh Now", use_container_width=True):
+        if st.button(" Refresh Now", use_container_width=True):
             st.session_state.last_update = None
             st.rerun()
         
@@ -128,7 +128,7 @@ def main():
             st.metric("Last Update", "Never")
         
         # Display data source
-        source_icon = "📊" if st.session_state.data_source == 'yfinance' else "📊"
+        source_icon = "📊" if st.session_state.data_source == 'yfinance' else ""
         st.metric("Data Source", f"{source_icon} Yahoo Finance")
         
         # Display app info
@@ -236,7 +236,7 @@ def main():
     # ==================== Chart ====================
     
     st.markdown("---")
-    st.subheader("📈 Price Chart (30 Days + Prediction)")
+    st.subheader(" Price Chart (30 Days + Prediction)")
     
     # Prepare chart data
     chart_df = prepare_chart_data(df, pred)
@@ -281,7 +281,7 @@ def main():
     # ==================== Detailed Predictions ====================
     
     st.markdown("---")
-    st.subheader("🎯 Detailed Predictions (Next Day)")
+    st.subheader(" Detailed Predictions (Next Day)")
     
     pred_col1, pred_col2, pred_col3, pred_col4 = st.columns(4)
     
@@ -317,7 +317,7 @@ def main():
     # ==================== Recent Data Table ====================
     
     st.markdown("---")
-    st.subheader("📋 Recent Historical Data (Last 7 Days)")
+    st.subheader(" Recent Historical Data (Last 7 Days)")
     
     recent_data = df.tail(7)[['Open', 'High', 'Low', 'Price', 'Volume']].copy()
     recent_data.index = recent_data.index.strftime('%Y-%m-%d')

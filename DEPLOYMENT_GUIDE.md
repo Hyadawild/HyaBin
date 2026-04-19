@@ -79,29 +79,32 @@ Dockerfile                       # For Docker deployment (optional)
 
 ## 🔧 Why ONNX?
 
-| Aspect | TensorFlow | ONNX Runtime |
-|--------|-----------|---|
-| **Python 3.14 Support** | ❌ No wheels | ✅ Full support |
-| **File Size** | ~500MB | ~50MB |
-| **Inference Speed** | Slow | 10x faster |
-| **Dependencies** | Heavy | Lightweight |
-| **Production-Ready** | ⚠️ Python < 3.12 only | ✅ Any Python 3.9+ |
+| Aspect                  | TensorFlow            | ONNX Runtime       |
+| ----------------------- | --------------------- | ------------------ |
+| **Python 3.14 Support** | ❌ No wheels          | ✅ Full support    |
+| **File Size**           | ~500MB                | ~50MB              |
+| **Inference Speed**     | Slow                  | 10x faster         |
+| **Dependencies**        | Heavy                 | Lightweight        |
+| **Production-Ready**    | ⚠️ Python < 3.12 only | ✅ Any Python 3.9+ |
 
 ---
 
 ## 📊 Model Architecture
 
 **Input**: 30 timesteps × 5 features
+
 - Features: [Price, Open, High, Low, Volume]
 - Normalized: [0, 1] range
 
 **Hidden Layers**:
+
 - Conv1D (variable filters, kernel=2-5)
 - MaxPooling1D
 - LSTM (variable neurons 80-250)
 - Dense(25) → Dense(5)
 
 **Output**: 5 features for next day
+
 - Price (Primary)
 - Open, High, Low, Volume
 
@@ -112,11 +115,13 @@ Dockerfile                       # For Docker deployment (optional)
 ## 🧪 Testing
 
 ### Local Test
+
 ```bash
 streamlit run app.py
 ```
 
 ### Deployment Test
+
 1. Check model loads: `best_cnn_lstm_model.onnx` exists ✅
 2. Check scaler loads: `data_scaler.joblib` exists ✅
 3. Check Binance API: Click "🔄 Refresh Now" button ✅
@@ -127,22 +132,26 @@ streamlit run app.py
 ## 🐛 Troubleshooting
 
 ### Error: "No module named onnxruntime"
+
 ```bash
 pip install onnxruntime
 ```
 
 ### Error: "best_cnn_lstm_model.onnx not found"
+
 1. Run `python convert_to_onnx.py` locally
 2. Verify file exists: `ls -la best_cnn_lstm_model.onnx`
 3. Commit to Git: `git add best_cnn_lstm_model.onnx`
 4. Deploy again
 
 ### Error: "Binance API rate limit"
+
 - Normal - API allows 1200 requests/min
 - App requests ~1 req/min = OK
 - If error, wait 1 minute and refresh
 
 ### Error: "Prediction is NaN or unrealistic"
+
 - Check scaler loaded correctly
 - Verify latest 30 days of data fetched
 - Check prediction values in debug console
@@ -171,15 +180,15 @@ pip install onnxruntime
 
 ## 📝 Files Reference
 
-| File | Purpose | Status |
-|------|---------|--------|
-| `convert_to_onnx.py` | Convert .h5 to .onnx | ✅ Run locally |
-| `best_cnn_lstm_model.h5` | Original Keras model | 📦 Keep for reference |
-| `best_cnn_lstm_model.onnx` | Converted ONNX model | ✅ Deploy this |
-| `data_scaler.joblib` | Preprocessing scaler | ✅ Deploy this |
-| `app.py` | Main Streamlit app | ✅ Deploy this |
-| `utils.py` | Helper functions (ONNX) | ✅ Deploy this |
-| `requirements.txt` | Python dependencies | ✅ Deploy this |
+| File                       | Purpose                 | Status                |
+| -------------------------- | ----------------------- | --------------------- |
+| `convert_to_onnx.py`       | Convert .h5 to .onnx    | ✅ Run locally        |
+| `best_cnn_lstm_model.h5`   | Original Keras model    | 📦 Keep for reference |
+| `best_cnn_lstm_model.onnx` | Converted ONNX model    | ✅ Deploy this        |
+| `data_scaler.joblib`       | Preprocessing scaler    | ✅ Deploy this        |
+| `app.py`                   | Main Streamlit app      | ✅ Deploy this        |
+| `utils.py`                 | Helper functions (ONNX) | ✅ Deploy this        |
+| `requirements.txt`         | Python dependencies     | ✅ Deploy this        |
 
 ---
 
@@ -196,6 +205,7 @@ pip install onnxruntime
 ## 📧 Support
 
 If deployment still fails:
+
 1. Check Python version: `python --version` (should be 3.9+)
 2. Verify ONNX file exists and is readable
 3. Check internet connection for Binance API
