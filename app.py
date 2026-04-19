@@ -128,7 +128,7 @@ def main():
             st.metric("Last Update", "Never")
         
         # Display data source
-        source_icon = "📊" if st.session_state.data_source == 'yfinance' else ""
+        source_icon = "" if st.session_state.data_source == 'yfinance' else ""
         st.metric("Data Source", f"{source_icon} Yahoo Finance")
         
         # Display app info
@@ -196,7 +196,7 @@ def main():
     # ==================== Metrics Display ====================
     
     st.markdown("---")
-    st.subheader("📊 Price Overview")
+    st.subheader(" Price Overview")
     
     col1, col2, col3 = st.columns(3)
     
