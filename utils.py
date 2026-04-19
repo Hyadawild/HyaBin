@@ -3,7 +3,7 @@ import pandas as pd
 import onnxruntime as ort
 from sklearn.preprocessing import MinMaxScaler
 from joblib import load
-from binance.client import Client
+import yfinance as yf
 import datetime
 import warnings
 
@@ -33,50 +33,44 @@ def load_model_and_scaler(model_path='best_cnn_lstm_model.onnx', scaler_path='da
         raise Exception(f"Error loading model or scaler: {str(e)}")
 
 
-# ==================== Binance Data Fetching ====================
+# ==================== Data Fetching (yfinance) ====================
 
-def fetch_binance_data(symbol='BNBUSDT', days=30, interval='1d'):
+def fetch_bnb_data(ticker='BNB-USD', days=30):
     """
-    Fetch historical OHLCV data from Binance API
-    Note: May fail in restricted locations. Use fetch_coingecko_data as fallback.
+    Fetch historical OHLCV data from Yahoo Finance (yfinance)
+    
+    NO GEO-RESTRICTIONS, NO API KEY NEEDED, WORLDWIDE ACCESS
+    Works from any country including Indonesia
     
     Args:
-        symbol: Trading pair (default: BNBUSDT)
+        ticker: Ticker symbol (default: 'BNB-USD' for BNB in USD)
         days: Number of days to fetch (default: 30)
-        interval: Kline interval (default: 1d for daily)
     
     Returns:
-        pd.DataFrame: DataFrame with columns [Date, Open, High, Low, Price, Volume]
+        tuple: (df, source) where:
+            - df: DataFrame with columns [Date, Open, High, Low, Price, Volume]
+            - source: 'yfinance'
     """
     try:
-        # Initialize Binance client (public API, no keys needed)
-        client = Client()
+        # Calculate date range
+        end_date = datetime.datetime.now()
+        start_date = end_date - datetime.timedelta(days=days + 5)  # Extra days for margin
         
-        # Calculate start time
-        end_time = datetime.datetime.now()
-        start_time = end_time - datetime.timedelta(days=days)
+        # Fetch data using yfinance
+        print(f"Fetching {ticker} data from Yahoo Finance...")
+        df = yf.download(ticker, start=start_date, end=end_date, progress=False, interval='1d')
         
-        # Fetch klines (candlestick) data
-        klines = client.get_historical_klines(
-            symbol,
-            interval,
-            start_str=start_time.strftime('%Y-%m-%d'),
-            end_str=end_time.strftime('%Y-%m-%d')
-        )
+        if df.empty:
+            raise Exception(f"No data found for {ticker}")
         
-        # Create DataFrame
-        df = pd.DataFrame(klines, columns=[
-            'timestamp', 'open', 'high', 'low', 'close', 'volume',
-            'close_time', 'quote_asset_volume', 'number_of_trades',
-            'taker_buy_base', 'taker_buy_quote', 'ignore'
-        ])
+        # Reset index to make Date a column
+        df = df.reset_index()
         
-        # Convert timestamp to datetime
-        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+        # Rename columns to match our schema
+        df.columns = ['Date', 'Open', 'High', 'Low', 'Price', 'Volume', 'Adj Close']
         
-        # Select relevant columns and rename
-        df = df[['timestamp', 'open', 'high', 'low', 'close', 'volume']].copy()
-        df.columns = ['Date', 'Open', 'High', 'Low', 'Price', 'Volume']
+        # Select only relevant columns
+        df = df[['Date', 'Open', 'High', 'Low', 'Price', 'Volume']].copy()
         
         # Convert to numeric
         df['Open'] = pd.to_numeric(df['Open'], errors='coerce')
@@ -85,110 +79,24 @@ def fetch_binance_data(symbol='BNBUSDT', days=30, interval='1d'):
         df['Price'] = pd.to_numeric(df['Price'], errors='coerce')
         df['Volume'] = pd.to_numeric(df['Volume'], errors='coerce')
         
+        # Remove NaN rows
+        df = df.dropna()
+        
+        # Keep last 30 days
+        df = df.tail(30)
+        
         # Sort by date ascending (oldest first)
         df = df.sort_values('Date').reset_index(drop=True)
         
         # Set Date as index
         df.set_index('Date', inplace=True)
         
-        return df
+        print(f"✅ Fetched {len(df)} days of data from Yahoo Finance")
+        
+        return df, 'yfinance'
     
     except Exception as e:
-        raise Exception(f"Binance API error: {str(e)}")
-
-
-def fetch_coingecko_data(symbol='binancecoin', days=30):
-    """
-    Fetch historical OHLCV data from CoinGecko API
-    FREE API, NO KEY NEEDED, WORLDWIDE ACCESS
-    
-    Args:
-        symbol: Coin ID (default: 'binancecoin' for BNB)
-        days: Number of days to fetch (default: 30)
-    
-    Returns:
-        pd.DataFrame: DataFrame with columns [Date, Open, High, Low, Price, Volume]
-    """
-    try:
-        url = f"https://api.coingecko.com/api/v3/coins/{symbol}/market_chart"
-        
-        params = {
-            'vs_currency': 'usd',
-            'days': days,
-            'interval': 'daily'
-        }
-        
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        
-        # Extract OHLCV data
-        prices = data.get('prices', [])
-        
-        if not prices:
-            raise Exception("No price data from CoinGecko")
-        
-        # Create DataFrame
-        df_list = []
-        for i, price_data in enumerate(prices):
-            timestamp_ms = price_data[0]
-            close_price = price_data[1]
-            
-            # CoinGecko doesn't provide OHLHV directly, so we create approximations
-            # Using close price for all (conservative estimate)
-            df_list.append({
-                'Date': datetime.datetime.fromtimestamp(timestamp_ms / 1000),
-                'Open': close_price,
-                'High': close_price,
-                'Low': close_price,
-                'Price': close_price,
-                'Volume': 0  # CoinGecko doesn't provide volume in this endpoint
-            })
-        
-        df = pd.DataFrame(df_list)
-        
-        # Add realistic volume estimates (based on price volatility)
-        # This is approximate since CoinGecko doesn't provide volume
-        price_std = df['Price'].std()
-        df['Volume'] = (price_std * 1000000).astype(int)  # Approximate volume
-        
-        # Sort by date ascending
-        df = df.sort_values('Date').reset_index(drop=True)
-        
-        # Set Date as index
-        df.set_index('Date', inplace=True)
-        
-        return df
-    
-    except Exception as e:
-        raise Exception(f"CoinGecko API error: {str(e)}")
-
-
-def fetch_binance_or_coingecko(symbol_binance='BNBUSDT', symbol_coingecko='binancecoin', days=30):
-    """
-    Fetch data from Binance first, fallback to CoinGecko if Binance fails
-    (Handles geo-restrictions gracefully)
-    
-    Args:
-        symbol_binance: Binance trading pair
-        symbol_coingecko: CoinGecko coin ID
-        days: Number of days to fetch
-    
-    Returns:
-        tuple: (df, source) where source is 'binance' or 'coingecko'
-    """
-    try:
-        # Try Binance first
-        df = fetch_binance_data(symbol_binance, days)
-        return df, 'binance'
-    except Exception as e:
-        print(f"Binance API failed: {str(e)[:100]}... Falling back to CoinGecko")
-        try:
-            # Fallback to CoinGecko
-            df = fetch_coingecko_data(symbol_coingecko, days)
-            return df, 'coingecko'
-        except Exception as e2:
-            raise Exception(f"Both APIs failed. Binance: {str(e)[:50]}... CoinGecko: {str(e2)[:50]}...")
+        raise Exception(f"Error fetching Yahoo Finance data: {str(e)}")
 
 
 # ==================== Data Preprocessing ====================

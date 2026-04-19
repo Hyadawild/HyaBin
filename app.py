@@ -6,7 +6,7 @@ import datetime
 import time
 from utils import (
     load_model_and_scaler,
-    fetch_binance_or_coingecko,
+    fetch_bnb_data,
     get_latest_sequence,
     predict_price,
     calculate_change_percent,
@@ -102,7 +102,7 @@ def main():
     Predicts next day's closing price based on 30 days of historical data.
     
     **Model**: ONNX format (converted from TensorFlow Keras)
-    **Data Source**: Binance API (with CoinGecko fallback for restricted regions)
+    **Data Source**: Yahoo Finance (yfinance) - No geo-blocking, worldwide access
     """)
     
     # ==================== Sidebar ====================
@@ -127,8 +127,8 @@ def main():
             st.metric("Last Update", "Never")
         
         # Display data source
-        source_icon = "🌐" if st.session_state.data_source == 'coingecko' else "📊"
-        st.metric("Data Source", f"{source_icon} {st.session_state.data_source.title()}")
+        source_icon = "📊" if st.session_state.data_source == 'yfinance' else "📊"
+        st.metric("Data Source", f"{source_icon} Yahoo Finance")
         
         # Display app info
         st.markdown("---")
@@ -156,14 +156,10 @@ def main():
             should_update = True
     
     if should_update:
-        with st.spinner("📊 Fetching data from Binance/CoinGecko..."):
+        with st.spinner("📊 Fetching data from Yahoo Finance..."):
             try:
-                # Fetch data (tries Binance, fallback to CoinGecko)
-                df, source = fetch_binance_or_coingecko(
-                    symbol_binance='BNBUSDT',
-                    symbol_coingecko='binancecoin',
-                    days=30
-                )
+                # Fetch data using yfinance
+                df, source = fetch_bnb_data(ticker='BNB-USD', days=30)
                 
                 # Get latest sequence for prediction
                 X_recent = get_latest_sequence(df, scaler, seq_length=30)

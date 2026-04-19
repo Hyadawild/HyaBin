@@ -5,7 +5,7 @@
 Streamlit app untuk prediksi harga BNB real-time menggunakan CNN-LSTM neural network dengan Genetic Algorithm optimization.
 
 **Model**: CNN-LSTM dengan 30-timestep input
-**Data**: Binance API (BNB/USDT)
+**Data Source**: Yahoo Finance (yfinance) - No geo-blocking, worldwide access ✨
 **Update**: Per menit
 **Prediction**: Next day's price (1-step ahead)
 

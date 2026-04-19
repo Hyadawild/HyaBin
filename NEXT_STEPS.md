@@ -50,7 +50,7 @@ Visit: `http://localhost:8501`
 git add convert_to_onnx.py best_cnn_lstm_model.onnx
 git add app.py utils.py requirements.txt
 git add DEPLOYMENT_GUIDE.md Dockerfile
-git commit -m "Convert model to ONNX - Python 3.14 compatible"
+git commit -m "Use yfinance for worldwide data access"
 git push
 ```
 
@@ -60,24 +60,23 @@ Then re-deploy to Streamlit Cloud or your cloud platform!
 
 ## 🔑 Why This Works
 
-| Problem | Solution |
-|---------|----------|
-| TensorFlow has no Python 3.14 wheels | ✅ Use ONNX Runtime (Python 3.14 compatible) |
-| Pandas fails to compile on Python 3.14 | ✅ ONNX Runtime uses minimal dependencies |
-| Deployment still using Python 3.14.4 | ✅ ONNX Runtime supports any Python 3.9+ |
-| Model size too large | ✅ ONNX file ~50MB vs TensorFlow ~500MB |
+| Component | Solution | Benefit |
+|-----------|----------|---------|
+| Model | ONNX Runtime | Python 3.14 compatible, 10x faster |
+| Data | Yahoo Finance (yfinance) | No geo-blocking, worldwide, reliable |
+| Deployment | Streamlit Cloud | Free, easy, supports Python 3.11 |
 
 ---
 
-## ⚡ Key Changes Made
+## ⚡ Key Changes Made (Final Version)
 
-**files updated:**
-1. ✅ `requirements.txt` - Removed TensorFlow, added onnxruntime
-2. ✅ `utils.py` - Now uses ONNX Runtime instead of TensorFlow
-3. ✅ `app.py` - Updated to use ONNX session
-4. ✅ `convert_to_onnx.py` - NEW! Model conversion script
-5. ✅ `DEPLOYMENT_GUIDE.md` - NEW! Full deployment guide
-6. ✅ `Dockerfile` - NEW! Docker option
+**Files Updated:**
+1. ✅ `requirements.txt` - Replaced python-binance with yfinance
+2. ✅ `utils.py` - Simple yfinance data fetching
+3. ✅ `app.py` - Updated to use yfinance
+4. ✅ `convert_to_onnx.py` - Model conversion script
+5. ✅ `DEPLOYMENT_GUIDE.md` - Full deployment guide
+6. ✅ `Dockerfile` - Docker option
 
 ---
 
@@ -87,6 +86,15 @@ Then re-deploy to Streamlit Cloud or your cloud platform!
 2. **MUST commit `.onnx` file to Git**
 3. **MUST update deployment files (push to Git)**
 4. After that, deployment should work!
+
+---
+
+**Key Benefits of yfinance:**
+- ✅ No API keys needed
+- ✅ No geo-restrictions (works worldwide)
+- ✅ Reliable data source
+- ✅ Simple to use
+- ✅ Works from Indonesia, Malaysia, or any country
 
 ---
 
