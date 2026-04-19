@@ -66,11 +66,10 @@ def fetch_bnb_data(ticker='BNB-USD', days=30):
         # Reset index to make Date a column
         df = df.reset_index()
         
-        # Rename columns to match our schema
-        df.columns = ['Date', 'Open', 'High', 'Low', 'Price', 'Volume', 'Adj Close']
-        
-        # Select only relevant columns
-        df = df[['Date', 'Open', 'High', 'Low', 'Price', 'Volume']].copy()
+        # Rename columns: yfinance returns [Date, Open, High, Low, Close, Volume, Adj Close]
+        # We rename Close to Price for consistency with our model
+        df = df[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']].copy()
+        df.columns = ['Date', 'Open', 'High', 'Low', 'Price', 'Volume']
         
         # Convert to numeric
         df['Open'] = pd.to_numeric(df['Open'], errors='coerce')
