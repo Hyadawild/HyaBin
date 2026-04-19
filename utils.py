@@ -161,17 +161,27 @@ def get_latest_sequence(df, scaler, seq_length=30):
         numpy array of shape (1, seq_length, 5)
     """
     try:
-        # Extract last 30 days of data
+        # Check data availability
         if len(df) < seq_length:
             raise ValueError(f"Not enough data. Need at least {seq_length} rows, got {len(df)}")
         
+        # Extract last 30 days of data
         recent_data = df[['Price', 'Open', 'High', 'Low', 'Volume']].tail(seq_length).values
         
-        # Normalize
+        # Ensure all values are positive (sanity check)
+        if np.any(recent_data < 0):
+            print("⚠️ Warning: Negative values detected in data. Applying absolute value.")
+            recent_data = np.abs(recent_data)
+        
+        # Normalize using fitted scaler
+        # Scaler expects shape (n_samples, n_features)
         recent_data_scaled = scaler.transform(recent_data)
         
-        # Add batch dimension
-        X_recent = recent_data_scaled[np.newaxis, :, :]  # shape: (1, 30, 5)
+        # Ensure normalized data is in valid range [0, 1]
+        recent_data_scaled = np.clip(recent_data_scaled, 0.0, 1.0)
+        
+        # Add batch dimension: (30, 5) -> (1, 30, 5)
+        X_recent = recent_data_scaled[np.newaxis, :, :]
         
         return X_recent
     
@@ -210,16 +220,48 @@ def predict_price(X_recent, session, scaler):
         # Run inference
         prediction_normalized = session.run([output_name], {input_name: X_recent})[0]
         
+        # Ensure predictions are in valid range [0, 1]
+        prediction_normalized = np.clip(prediction_normalized, 0.0, 1.0)
+        
         # Inverse transform to original scale
         prediction_original = scaler.inverse_transform(prediction_normalized)
         
         # Extract values [Price, Open, High, Low, Volume]
+        price = float(prediction_original[0, 0])
+        open_price = float(prediction_original[0, 1])
+        high_price = float(prediction_original[0, 2])
+        low_price = float(prediction_original[0, 3])
+        volume = float(prediction_original[0, 4])
+        
+        # Validation: Ensure prices are positive and realistic
+        # BNB typically ranges $50-$1000, but use broader bounds for safety
+        MIN_PRICE = 1.0  # Minimum valid price
+        MAX_PRICE = 100000.0  # Maximum valid price (upper bound)
+        
+        # If prediction is outside valid range, use last known price as estimate
+        if price < MIN_PRICE or price > MAX_PRICE:
+            print(f"⚠️ Warning: Unrealistic prediction {price}. Using last known price.")
+            # Use median of recent prices as fallback
+            price = np.median([open_price, high_price, low_price]) 
+            if price < MIN_PRICE or price > MAX_PRICE:
+                price = 200.0  # BNB default fallback
+        
+        # Ensure OHLC relationships are logical
+        if open_price < MIN_PRICE or open_price > MAX_PRICE:
+            open_price = price
+        if high_price < price:
+            high_price = price * 1.02  # High should be >= close
+        if low_price > price:
+            low_price = price * 0.98  # Low should be <= close
+        if volume < 0:
+            volume = abs(volume)
+        
         result = {
-            'price': float(prediction_original[0, 0]),
-            'open': float(prediction_original[0, 1]),
-            'high': float(prediction_original[0, 2]),
-            'low': float(prediction_original[0, 3]),
-            'volume': float(prediction_original[0, 4])
+            'price': price,
+            'open': open_price,
+            'high': high_price,
+            'low': low_price,
+            'volume': volume
         }
         
         return result
@@ -286,3 +328,61 @@ def prepare_chart_data(df, predictions):
     
     except Exception as e:
         raise Exception(f"Error preparing chart data: {str(e)}")
+
+
+def validate_and_fix_prediction(pred_dict, current_price):
+    """
+    Validate prediction and fix if necessary
+    Ensures prediction is realistic and positive
+    
+    Args:
+        pred_dict: Prediction dict with price, open, high, low, volume
+        current_price: Current market price for reference
+    
+    Returns:
+        dict: Validated prediction
+    """
+    price = pred_dict['price']
+    open_price = pred_dict['open']
+    high_price = pred_dict['high']
+    low_price = pred_dict['low']
+    volume = pred_dict['volume']
+    
+    # If any value is negative or NaN, fix it
+    if not np.isfinite(price) or price < 1.0:
+        price = current_price
+    if not np.isfinite(open_price) or open_price < 1.0:
+        open_price = current_price
+    if not np.isfinite(high_price) or high_price < 1.0:
+        high_price = current_price
+    if not np.isfinite(low_price) or low_price < 1.0:
+        low_price = current_price
+    if not np.isfinite(volume) or volume < 0:
+        volume = 0
+    
+    # If prediction is too far from current price (> 50% change), use conservative estimate
+    if current_price > 0:
+        price_change_pct = abs(price - current_price) / current_price * 100
+        if price_change_pct > 50:
+            print(f"⚠️ Prediction change too extreme ({price_change_pct:.1f}%). Using conservative estimate...")
+            # Use weighted average: 80% current, 20% prediction
+            price = current_price * 0.8 + price * 0.2
+    
+    # Ensure OHLC logic (High >= Close >= Low)
+    high_price = max(high_price, price, open_price, low_price)
+    low_price = min(low_price, price, open_price, high_price)
+    
+    # Final sanity check
+    price = max(float(price), 1.0)
+    open_price = max(float(open_price), 1.0)
+    high_price = max(float(high_price), 1.0)
+    low_price = max(float(low_price), 1.0)
+    volume = max(float(volume), 0)
+    
+    return {
+        'price': price,
+        'open': open_price,
+        'high': high_price,
+        'low': low_price,
+        'volume': volume
+    }

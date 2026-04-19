@@ -12,7 +12,8 @@ from utils import (
     calculate_change_percent,
     format_price,
     get_current_price,
-    prepare_chart_data
+    prepare_chart_data,
+    validate_and_fix_prediction
 )
 
 # ==================== Page Configuration ====================
@@ -166,6 +167,10 @@ def main():
                 
                 # Make prediction
                 pred = predict_price(X_recent, session, scaler)
+                
+                # Validate and fix prediction if needed
+                current_price = get_current_price(df)
+                pred = validate_and_fix_prediction(pred, current_price)
                 
                 # Store in session state
                 st.session_state.data = df
