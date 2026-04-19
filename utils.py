@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import tensorflow as tf
+import onnxruntime as ort
 from sklearn.preprocessing import MinMaxScaler
 from joblib import load
 from binance.client import Client
@@ -11,21 +11,24 @@ warnings.filterwarnings('ignore')
 
 # ==================== Model & Scaler Loading ====================
 
-def load_model_and_scaler(model_path='best_cnn_lstm_model.h5', scaler_path='data_scaler.joblib'):
+def load_model_and_scaler(model_path='best_cnn_lstm_model.onnx', scaler_path='data_scaler.joblib'):
     """
-    Load trained CNN-LSTM model and data scaler
+    Load trained CNN-LSTM model (ONNX format) and data scaler
     
     Args:
-        model_path: Path to .h5 model file
+        model_path: Path to .onnx model file
         scaler_path: Path to .joblib scaler file
     
     Returns:
-        tuple: (model, scaler)
+        tuple: (session, scaler)
+        - session: ONNX Runtime InferenceSession
+        - scaler: Fitted MinMaxScaler object
     """
     try:
-        model = tf.keras.models.load_model(model_path)
+        # Load ONNX model using ONNX Runtime
+        session = ort.InferenceSession(model_path, providers=['CPUExecutionProvider'])
         scaler = load(scaler_path)
-        return model, scaler
+        return session, scaler
     except Exception as e:
         raise Exception(f"Error loading model or scaler: {str(e)}")
 
@@ -176,13 +179,13 @@ def get_latest_sequence(df, scaler, seq_length=30):
 
 # ==================== Model Prediction ====================
 
-def predict_price(X_recent, model, scaler):
+def predict_price(X_recent, session, scaler):
     """
-    Predict next day's values using the model
+    Predict next day's values using ONNX model
     
     Args:
         X_recent: Input sequence of shape (1, 30, 5)
-        model: Trained CNN-LSTM model
+        session: ONNX Runtime InferenceSession
         scaler: Fitted MinMaxScaler object
     
     Returns:
@@ -195,8 +198,15 @@ def predict_price(X_recent, model, scaler):
         }
     """
     try:
-        # Model prediction (normalized output)
-        prediction_normalized = model.predict(X_recent, verbose=0)  # shape: (1, 5)
+        # Get input and output names from ONNX model
+        input_name = session.get_inputs()[0].name
+        output_name = session.get_outputs()[0].name
+        
+        # Convert input to float32
+        X_recent = X_recent.astype(np.float32)
+        
+        # Run inference
+        prediction_normalized = session.run([output_name], {input_name: X_recent})[0]
         
         # Inverse transform to original scale
         prediction_original = scaler.inverse_transform(prediction_normalized)

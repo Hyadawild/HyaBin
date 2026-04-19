@@ -56,10 +56,10 @@ st.markdown("""
 
 @st.cache_resource
 def init_model():
-    """Load and cache model and scaler"""
+    """Load and cache ONNX model and scaler"""
     try:
-        model, scaler = load_model_and_scaler()
-        return model, scaler
+        session, scaler = load_model_and_scaler()
+        return session, scaler
     except Exception as e:
         st.error(f"Error loading model: {str(e)}")
         return None, None
@@ -88,8 +88,8 @@ def main():
     init_session_state()
     
     # Load model and scaler
-    model, scaler = init_model()
-    if model is None or scaler is None:
+    session, scaler = init_model()
+    if session is None or scaler is None:
         st.error("❌ Failed to load model. Please check if model files exist.")
         return
     
@@ -98,6 +98,8 @@ def main():
     st.markdown("""
     Real-time BNB/USDT price prediction using CNN-LSTM Neural Network with Genetic Algorithm optimization.
     Predicts next day's closing price based on 30 days of historical data.
+    
+    **Model**: ONNX format (converted from TensorFlow Keras)
     """)
     
     # ==================== Sidebar ====================
@@ -156,7 +158,7 @@ def main():
                 X_recent = get_latest_sequence(df, scaler, seq_length=30)
                 
                 # Make prediction
-                pred = predict_price(X_recent, model, scaler)
+                pred = predict_price(X_recent, session, scaler)
                 
                 # Store in session state
                 st.session_state.data = df
