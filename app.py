@@ -6,7 +6,7 @@ import datetime
 import time
 from utils import (
     load_model_and_scaler,
-    fetch_binance_data,
+    fetch_binance_or_coingecko,
     get_latest_sequence,
     predict_price,
     calculate_change_percent,
@@ -77,6 +77,8 @@ def init_session_state():
         st.session_state.error_message = None
     if 'update_interval' not in st.session_state:
         st.session_state.update_interval = 60  # seconds
+    if 'data_source' not in st.session_state:
+        st.session_state.data_source = 'unknown'
 
 
 # ==================== Main Application ====================
@@ -100,6 +102,7 @@ def main():
     Predicts next day's closing price based on 30 days of historical data.
     
     **Model**: ONNX format (converted from TensorFlow Keras)
+    **Data Source**: Binance API (with CoinGecko fallback for restricted regions)
     """)
     
     # ==================== Sidebar ====================
@@ -122,6 +125,10 @@ def main():
             st.metric("Last Update", f"{minutes} min ago" if minutes > 0 else "Just now")
         else:
             st.metric("Last Update", "Never")
+        
+        # Display data source
+        source_icon = "🌐" if st.session_state.data_source == 'coingecko' else "📊"
+        st.metric("Data Source", f"{source_icon} {st.session_state.data_source.title()}")
         
         # Display app info
         st.markdown("---")
@@ -149,10 +156,14 @@ def main():
             should_update = True
     
     if should_update:
-        with st.spinner("📊 Fetching data from Binance..."):
+        with st.spinner("📊 Fetching data from Binance/CoinGecko..."):
             try:
-                # Fetch data
-                df = fetch_binance_data(symbol='BNBUSDT', days=30, interval='1d')
+                # Fetch data (tries Binance, fallback to CoinGecko)
+                df, source = fetch_binance_or_coingecko(
+                    symbol_binance='BNBUSDT',
+                    symbol_coingecko='binancecoin',
+                    days=30
+                )
                 
                 # Get latest sequence for prediction
                 X_recent = get_latest_sequence(df, scaler, seq_length=30)
@@ -164,6 +175,7 @@ def main():
                 st.session_state.data = df
                 st.session_state.prediction = pred
                 st.session_state.last_update = datetime.datetime.now()
+                st.session_state.data_source = source
                 st.session_state.error_message = None
                 
                 st.rerun()
