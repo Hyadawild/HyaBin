@@ -332,19 +332,22 @@ def main():
     
     # ==================== Auto-refresh logic ====================
     
-    if auto_refresh:
+    if auto_refresh and st.session_state.last_update:
         st.markdown("---")
         # Use placeholder for countdown timer
         timer_placeholder = st.empty()
         
-        while auto_refresh and (datetime.datetime.now() - st.session_state.last_update).total_seconds() < st.session_state.update_interval:
+        while auto_refresh and st.session_state.last_update:
             seconds_left = st.session_state.update_interval - (datetime.datetime.now() - st.session_state.last_update).total_seconds()
-            timer_placeholder.info(f"⏱️ Next update in {int(seconds_left)} seconds...")
-            time.sleep(1)
+            if seconds_left > 0:
+                timer_placeholder.info(f"⏱️ Next update in {int(seconds_left)} seconds...")
+                time.sleep(1)
+            else:
+                break
         
-        if auto_refresh:
+        if auto_refresh and st.session_state.last_update:
             st.rerun()
-
+ 
 
 if __name__ == "__main__":
     main()
